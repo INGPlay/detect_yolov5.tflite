@@ -1,5 +1,6 @@
 import tensorflow as tf
 # from tflite_runtime.interpreter import Interpreter
+# from tflite_runtime.interpreter import load_delegate
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
@@ -28,7 +29,7 @@ def draw_text(img, text,
 def main() :
     model = 'yolov5n-fp16-320.tflite'
     interpreter = tf.lite.Interpreter(model_path=model)
-    # from tflite_runtime.interpreter import Interpreter
+    # interpreter = Interpreter(model_path=model)
     interpreter.allocate_tensors()
 
     # input

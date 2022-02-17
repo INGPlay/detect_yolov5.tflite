@@ -1,9 +1,13 @@
-import tensorflow as tf
-# from tflite_runtime.interpreter import Interpreter
+try:  # https://coral.ai/docs/edgetpu/tflite-python/#update-existing-tf-lite-code-for-the-edge-tpu
+    from tflite_runtime.interpreter import Interpreter, load_delegate
+except ImportError:
+    import tensorflow as tf
+    Interpreter, load_delegate = tf.lite.Interpreter, tf.lite.experimental.load_delegate,
 import numpy as np
 import cv2
 import os
 import sys
+import timeit
 
 
 def draw_text(img, text,
@@ -27,12 +31,21 @@ def draw_text(img, text,
 
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
-url = 'rtsp://admin:worldcns\!@192.168.1.12:554/profile1/media.smp'
+# input Value
+#url = "rtsp://admin:worldcns\!@192.168.1.12:554/profile1/media.smp"
+url = "People - 84973.mp4"
+model = 'yolov5n-fp16-320.tflite'
+imageSize = 320
+
 
 cap = cv2.VideoCapture(url)
 
-imageSize = 320
+if not cap.isOpened() :
+    print("Camera open failed!")
+    sys.exit()
 
+a = cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+print(a)
 w = cap.set(cv2.CAP_PROP_FRAME_WIDTH, imageSize)
 h = cap.set(cv2.CAP_PROP_FRAME_HEIGHT, imageSize)
 f = cap.set(cv2.CAP_PROP_FPS, 30000)
@@ -44,19 +57,23 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 print(f"Width : {videoWidth}, Height : {videoHeight}, FPS : {fps}")
 
 
-if not cap.isOpened() :
-    print("Camera open failed!")
-    sys.exit()
-
-model = 'yolov5n-fp16-320.tflite'
 interpreter = tf.lite.Interpreter(model_path=model)
-# from tflite_runtime.interpreter import Interpreter
+# interpreter = Interpreter(model_path=model)
 interpreter.allocate_tensors()
 
 inputDetails = interpreter.get_input_details()[0]
 
+labels = []
+with open("labels.txt", "r") as fs :
+    lines = fs.readlines()
+    for l in lines :
+        l = l.strip()
+        labels.append(l)
 
 while True :
+    # timer start
+    start_t = timeit.default_timer()   
+
     ret, image = cap.read()
     if not ret :
         break
@@ -72,9 +89,8 @@ while True :
     imageShape = image.shape
     originalWidth = int(imageShape[0])
     originalHeight = int(imageShape[1])
-    sliX = int(originalWidth/2 - 160)
-    sliY = int(originalHeight/2 - 160)
-
+    sliX = int((originalWidth -imageSize) * 0.5)
+    sliY = int((originalHeight - imageSize) * 0.5)
 
     image = image[sliX : sliX + imageSize, sliY : sliY + imageSize]
 
@@ -88,13 +104,6 @@ while True :
     outputDetails = interpreter.get_output_details()[0]['index']
     output = interpreter.get_tensor(outputDetails)[0]
 
-    labels = []
-    with open("labels.txt", "r") as fs :
-        lines = fs.readlines()
-        for l in lines :
-            l = l.strip()
-            labels.append(l)
-
     for i in range(len(output)) :
         conf = output[i][4]
 
@@ -107,7 +116,7 @@ while True :
             cv2.rectangle(image, (int(x),int(y),int(w),int(h)),(0,255,0), 2)
             cls = output[i][5:].argmax()
             label = labels[cls]
-
+            print(label)
             draw_text(image, f"{label} {conf:.2f}",
                 pos= (int(x), int(y)), 
                 font= cv2.FONT_HERSHEY_DUPLEX, 
@@ -117,8 +126,13 @@ while True :
             )
 
     cv2.imshow("video", image)
+    
+    # timer end
+    terminate_t = timeit.default_timer()
+    FPS = int(1./(terminate_t - start_t ))
+    print(f"{FPS} fps")
 
-    if cv2.waitKey(10) == 27 :
+    if cv2.waitKey(1) == 27 :
         break
 
 cap.release()
