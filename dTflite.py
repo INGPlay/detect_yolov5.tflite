@@ -5,86 +5,11 @@ except ImportError:
     Interpreter, load_delegate = tf.lite.Interpreter, tf.lite.experimental.load_delegate,
 # from tflite_runtime.interpreter import Interpreter
 # from tflite_runtime.interpreter import load_delegate
-import numpy as np
 import cv2
 import os
 import sys
 import timeit
-import platform
-
-
-def cropImageCenter(image, width, height) :
-    imageShape = image.shape
-    originalWidth = int(imageShape[0])
-    originalHeight = int(imageShape[1])
-    sliX = int((originalWidth - width) * 0.5)
-    sliY = int((originalHeight - height) * 0.5)
-
-    image = image[sliX : sliX + width, sliY : sliY + height]
-    
-    return image
-
-def draw_text(img, text,
-          pos=(0, 0),
-          font=cv2.FONT_HERSHEY_PLAIN,
-          font_scale=3,
-          font_thickness=2,
-          text_color=(0, 255, 0),
-          text_color_bg=(0, 0, 0)
-          ):
-          
-    text_size, _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-    text_w, text_h = text_size
-    centerX, centerY = pos
-    centerY = centerY - text_h
-    cv2.rectangle(img, (centerX,centerY), (centerX + text_w, centerY + text_h), text_color_bg, -1)
-    cv2.putText(img, text, (centerX, centerY + text_h + font_scale - 1), font, font_scale, text_color, font_thickness)
-
-    return text_size
-
-def detectImage(image, interpreter, inputDetails, imageSize, thres, labels) :
-
-    image = cropImageCenter(image=image, width=imageSize, height=imageSize)
-    # plt.imshow(image); plt.show()
-
-    # quantinzation
-    scale, zeroPoint = inputDetails["quantization"]
-
-    qImage = np.uint8(image / scale + zeroPoint)
-
-    #input
-    interpreter.set_tensor(inputDetails['index'], np.uint8([qImage]))
-
-    interpreter.invoke()
-
-    # output
-    outputDetails = interpreter.get_output_details()[0]
-    output = interpreter.get_tensor(outputDetails['index'])[0]
-    scale, zeroPoint = inputDetails["quantization"]
-    output = (output.astype(np.float32) - zeroPoint) * scale
-
-    for i in range(len(output)) :
-        conf = output[i][4]
-
-        if conf >= thres :
-            w = round(output[i][2] * imageSize)
-            h = round(output[i][3] * imageSize)
-            x = round(output[i][0] * imageSize)
-            y = round(output[i][1] * imageSize)
-
-            cv2.rectangle(image, (int(x),int(y),int(w),int(h)),(0,255,0), 2)
-            cls = output[i][5:].argmax()
-            label = labels[cls]
-
-            draw_text(image, f"{label} {conf:.2f}",
-                pos= (int(x), int(y)), 
-                font= cv2.FONT_HERSHEY_DUPLEX, 
-                font_scale = 1, 
-                text_color = (0, 0, 255), 
-                font_thickness = 1
-            )
-
-    cv2.imshow("video", image)
+from detect.detector import detectImage
 
 
 def main() :
@@ -144,7 +69,7 @@ def main() :
         if frameSecond > frameStartTime - endTime :
             continue
 
-        detectImage(
+        outputImage = detectImage(
             image= image,
             interpreter= interpreter,
             inputDetails= inputDetails,
@@ -153,6 +78,8 @@ def main() :
             labels= labels
         )
         
+        cv2.imshow("detect", outputImage)
+
         # timer end
         endTime = timeit.default_timer()
         evaluedFps = int(1./(endTime - frameStartTime))
