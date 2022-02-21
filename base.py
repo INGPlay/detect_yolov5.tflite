@@ -3,7 +3,8 @@ import os
 import timeit
  
 
-filePath = 'People - 84973.mp4'
+#filePath = 'People - 84973.mp4'
+filePath = 'rtsp://admin:worldcns1\!@192.168.1.12:554/profile1/media.smp'
 cap = cv2.VideoCapture(filePath)
 
 # 프레임을 정수형으로 형 변환

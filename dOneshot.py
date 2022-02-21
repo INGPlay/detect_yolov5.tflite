@@ -9,9 +9,12 @@ import matplotlib.pyplot as plt
 
 image = cv2.imread('image4.png')
 model = 'yolov5n-int8-320_edgetpu.tflite'
-interpreter = Interpreter(model_path=model)
+interpreter = Interpreter(
+    model_path=model,
+    experimental_delegates=[load_delegate('libedgetpu.so.1')])
 interpreter.allocate_tensors()
 inputDetails = interpreter.get_input_details()[0]
+outputDetails = interpreter.get_output_details()[0]
 imageSize = 320
 thres = 0.5
 labels = []
@@ -25,6 +28,7 @@ setImage = detector.detectImage(
     image=image,
     interpreter=interpreter,
     inputDetails=inputDetails,
+    outputDetails=outputDetails,
     imageSize=imageSize,
     thres=thres,
     labels=labels

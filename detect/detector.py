@@ -1,15 +1,15 @@
-try:  # https://coral.ai/docs/edgetpu/tflite-python/#update-existing-tf-lite-code-for-the-edge-tpu
-    from tflite_runtime.interpreter import Interpreter, load_delegate
-except ImportError:
-    import tensorflow as tf
-    Interpreter, load_delegate = tf.lite.Interpreter, tf.lite.experimental.load_delegate,
+# try:  # https://coral.ai/docs/edgetpu/tflite-python/#update-existing-tf-lite-code-for-the-edge-tpu
+from tflite_runtime.interpreter import Interpreter, load_delegate
+# except ImportError:
+#     import tensorflow as tf
+#     Interpreter, load_delegate = tf.lite.Interpreter, tf.lite.experimental.load_delegate,
 import numpy as np
 import cv2
 from tools.editImage import cropImageCenter
 from tools.editImage import draw_text
 
 
-def detectImage(image, interpreter, inputDetails, imageSize, thres, labels) :
+def detectImage(image, interpreter, inputDetails, outputDetails, imageSize, thres, labels) :
 
     image = cropImageCenter(image=image, width=imageSize, height=imageSize)
     # plt.imshow(image); plt.show()
@@ -24,7 +24,6 @@ def detectImage(image, interpreter, inputDetails, imageSize, thres, labels) :
     interpreter.invoke()
 
     # output
-    outputDetails = interpreter.get_output_details()[0]
     output = interpreter.get_tensor(outputDetails['index'])[0]
     scale, zeroPoint = outputDetails["quantization"]
     output = (output.astype(np.float32) - zeroPoint) * scale

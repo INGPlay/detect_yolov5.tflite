@@ -19,9 +19,9 @@ def main() :
     imageSize = 320
     thres = 0.5
 
-    #url = "rtsp://admin:worldcns\!@192.168.1.12:554/profile1/media.smp"
-    url = "People - 84973.mp4"
-    model = 'yolov5n-int8-320_edgetpu.tflite'        
+    #url = "People - 84973.mp4"
+    url = "http://admin:worldcns1\!@192.168.1.91:80/ipcam/mjpeg.cgi"
+    model = 'yolov5n-int8-320_edgetpu.tflite'
 
     cap = cv2.VideoCapture(url)
 
@@ -30,18 +30,23 @@ def main() :
     fps = cap.get(cv2.CAP_PROP_FPS)
     print(f"Width : {videoWidth}, Height : {videoHeight}, evaluedFps : {fps}")
 
-    # try load_delegate('edgetpu.dll')
-    try :
+    # try load_delegate('libedgetpu.so.1')
+    try:
+        delegate = load_delegate('libedgetpu.so.1')
+    except ValueError:
+        delegate = 0
+    
+    if delegate :
         interpreter = Interpreter(
             model_path=model,
-            experimental_delegates=[load_delegate('edgetpu.dll')])
-    except OSError :
-        interpreter = Interpreter(
-            model_path=model)
+            experimental_delegates=[delegate])
+    else :
+        interpreter = Interpreter(model_path=model)
 
     interpreter.allocate_tensors()
 
     inputDetails = interpreter.get_input_details()[0]
+    outputDetails = interpreter.get_output_details()[0]
     if not cap.read() :
         print("Can not read")
         sys.exit()
@@ -73,6 +78,7 @@ def main() :
             image= image,
             interpreter= interpreter,
             inputDetails= inputDetails,
+            outputDetails= outputDetails,
             imageSize= imageSize,
             thres= thres,
             labels= labels
