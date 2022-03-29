@@ -32,7 +32,6 @@ def draw_text(img, text,
 os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
 # input Value
-#url = "rtsp://admin:worldcns\!@192.168.1.12:554/profile1/media.smp"
 url = "People - 84973.mp4"
 model = 'yolov5n-fp16-320.tflite'
 imageSize = 320

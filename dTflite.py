@@ -19,8 +19,7 @@ def main() :
     imageSize = 320
     thres = 0.5
 
-    #url = "People - 84973.mp4"
-    url = "http://admin:worldcns1\!@192.168.1.91:80/ipcam/mjpeg.cgi"
+    url = "People - 84973.mp4"
     model = 'yolov5n-int8-320_edgetpu.tflite'
 
     cap = cv2.VideoCapture(url)
